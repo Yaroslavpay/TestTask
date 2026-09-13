@@ -90,6 +90,16 @@ public class CarController : MonoBehaviour
     [SerializeField] private Transform rearRightWheelTransform;
 
     // ---------------------------------------------------------------------
+    // Vehicle Recovery
+    // ---------------------------------------------------------------------
+
+    [Header("Vehicle Recovery")]
+    [SerializeField] private bool enableRecovery = true;
+    [SerializeField] private float resetHeight = 1.5f;
+    [SerializeField] private float maxResetSpeed = 2f;
+    [SerializeField] private float upsideDownThreshold = 0.3f;
+    
+    // ---------------------------------------------------------------------
     // Lights bridge
     // ---------------------------------------------------------------------
 
@@ -191,7 +201,8 @@ public class CarController : MonoBehaviour
     {
         GetInput();
         UpdateWheelPoses();
-
+        HandleVehicleRecovery();
+        
         // Forward the current driving signals to the lights component. In manual
         // mode the reverse lamps follow the gear lever (on whenever R is engaged),
         // matching a real car; in automatic mode they track reverse throttle.
@@ -458,5 +469,40 @@ public class CarController : MonoBehaviour
         float force = (travelL - travelR) * antiRollForce;
         if (groundedL) rb.AddForceAtPosition(left.transform.up  * -force, left.transform.position);
         if (groundedR) rb.AddForceAtPosition(right.transform.up *  force, right.transform.position);
+    }
+
+    private void HandleVehicleRecovery()
+    {
+        if (!enableRecovery || Keyboard.current == null)
+        {
+            return;
+        }
+            
+        if (!Keyboard.current.rKey.wasPressedThisFrame)
+        {
+            return;
+        }
+
+        float uprightAmount = Vector3.Dot(transform.up, Vector3.up);
+
+        bool isUpsideDown = uprightAmount < upsideDownThreshold;
+        bool isMovingSlowly = rb.linearVelocity.magnitude <= maxResetSpeed;
+
+        if (isUpsideDown && isMovingSlowly)
+        {
+            RecoverVehicle();
+        }
+    }
+
+    private void RecoverVehicle()
+    {
+        rb.linearVelocity = Vector3.zero;
+        rb.angularVelocity = Vector3.zero;
+
+        Vector3 currentEuler = transform.eulerAngles;
+
+        transform.position += Vector3.up * resetHeight;
+
+        transform.rotation = Quaternion.Euler(0f, currentEuler.y, 0f);
     }
 }
