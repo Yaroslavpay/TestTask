@@ -44,6 +44,8 @@ public class RouteController : MonoBehaviour
             return;
         }
 
+        Debug.Log("Reached route point: " + point.PointName);
+        
         currentPointIndex++;
 
         if (currentPointIndex >= routePoints.Length)
