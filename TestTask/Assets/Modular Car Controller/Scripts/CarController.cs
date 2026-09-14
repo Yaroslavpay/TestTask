@@ -146,6 +146,22 @@ public class CarController : MonoBehaviour
     /// Signed forward speed of the car in metres per second. Positive when
     /// moving forward, negative when moving in reverse.
     /// </summary>
+
+    public bool CanRecover
+    {
+        get
+        {
+            if (!enableRecovery || rb == null)
+                return false;
+
+            float uprightAmount = Vector3.Dot(transform.up, Vector3.up);
+            bool isOverturned = uprightAmount < upsideDownThreshold;
+            bool isMovingSlowly = rb.linearVelocity.magnitude <= maxResetSpeed;
+
+            return isOverturned && isMovingSlowly;
+        }
+    }
+
     public float ForwardSpeed => rb != null ? Vector3.Dot(rb.linearVelocity, transform.forward) : 0f;
 
     /// <summary>
@@ -483,12 +499,7 @@ public class CarController : MonoBehaviour
             return;
         }
 
-        float uprightAmount = Vector3.Dot(transform.up, Vector3.up);
-
-        bool isUpsideDown = uprightAmount < upsideDownThreshold;
-        bool isMovingSlowly = rb.linearVelocity.magnitude <= maxResetSpeed;
-
-        if (isUpsideDown && isMovingSlowly)
+        if (CanRecover)
         {
             RecoverVehicle();
         }

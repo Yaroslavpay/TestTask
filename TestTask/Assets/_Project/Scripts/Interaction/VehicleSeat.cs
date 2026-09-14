@@ -11,6 +11,9 @@ public class VehicleSeat : MonoBehaviour
     [SerializeField] private GameObject vehicleCamera;
     [SerializeField] private Rigidbody vehicleRigidbody;
     [SerializeField] private WheelCollider[] wheelColliders;
+    
+    [Header("UI")]
+    [SerializeField] private GameObject vehicleHUD;
 
     public Transform DriverSeat => driverSeat;
     public Transform ExitPoint => exitPoint;
@@ -51,11 +54,16 @@ public class VehicleSeat : MonoBehaviour
             }
         }
 
-         if (vehicleController != null)
+        if (vehicleController != null)
         {
             vehicleController.enabled = isDriving;
         }
 
+        if (vehicleHUD != null)
+        {
+            vehicleHUD.SetActive(isDriving);
+        }  
+         
         if (vehicleCamera != null)
         {   
             vehicleCamera.SetActive(isDriving);

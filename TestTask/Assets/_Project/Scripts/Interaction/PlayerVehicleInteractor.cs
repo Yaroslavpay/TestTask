@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using TMPro;
 
 public class PlayerVehicleInteractor : MonoBehaviour
 {
@@ -9,6 +10,9 @@ public class PlayerVehicleInteractor : MonoBehaviour
     [SerializeField] private GameObject playerVisuals;
     [SerializeField] private GameObject playerCamera;
 
+    [Header("Interaction UI")]
+    [SerializeField] private TMP_Text interactionPromptText;
+
     private VehicleSeat nearbyVehicle;
     private VehicleSeat activeVehicle;
 
@@ -17,6 +21,8 @@ public class PlayerVehicleInteractor : MonoBehaviour
     private void Awake()
     {
         originalParent = transform.parent;
+
+        UpdateInteractionPrompt();
     }
 
     private void Update()
@@ -48,6 +54,8 @@ public class PlayerVehicleInteractor : MonoBehaviour
         if (vehicle != null)
         {
             nearbyVehicle = vehicle;
+
+            UpdateInteractionPrompt();
         }
     }
 
@@ -58,6 +66,8 @@ public class PlayerVehicleInteractor : MonoBehaviour
         if (vehicle == nearbyVehicle && activeVehicle == null)
         {
             nearbyVehicle = null;
+
+            UpdateInteractionPrompt();
         }
     }
 
@@ -77,6 +87,9 @@ public class PlayerVehicleInteractor : MonoBehaviour
         vehicle.SetDriving(true);
 
         playerCamera.SetActive(false);
+
+        UpdateInteractionPrompt();
+
     }
 
     private void ExitVehicle()
@@ -99,5 +112,29 @@ public class PlayerVehicleInteractor : MonoBehaviour
 
         activeVehicle = null;
         nearbyVehicle = null;
+        
+        UpdateInteractionPrompt();
+
+    }
+
+    private void UpdateInteractionPrompt()
+    {
+        if (interactionPromptText == null)
+            return;
+
+        if (activeVehicle != null)
+        {
+            interactionPromptText.gameObject.SetActive(true);
+            interactionPromptText.text = "[F] Exit Vehicle";
+        }
+        else if (nearbyVehicle != null)
+        {
+             interactionPromptText.gameObject.SetActive(true);
+            interactionPromptText.text = "[F] Enter Vehicle";
+        }
+        else
+        {
+            interactionPromptText.gameObject.SetActive(false);
+        }
     }
 }
