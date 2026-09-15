@@ -98,7 +98,26 @@ public class CarController : MonoBehaviour
     [SerializeField] private float resetHeight = 1.5f;
     [SerializeField] private float maxResetSpeed = 2f;
     [SerializeField] private float upsideDownThreshold = 0.3f;
-    
+
+    [Header("Stuck Recovery")]
+    [SerializeField] private Transform[] recoveryPoints;
+
+    [SerializeField] private float stuckDetectionTime = 2.5f;
+    [SerializeField] private float stuckSpeedThreshold = 0.6f;
+    [SerializeField] private float stuckMaxTravelDistance = 0.5f;
+
+    [SerializeField] private float stuckRecoveryHoldTime = 2f;
+    [SerializeField] private float stuckReleaseSpeed = 1.5f;
+
+    private float stuckTimer;
+    private float recoveryHoldTimer;
+
+    private Vector3 stuckStartPosition;
+
+    private bool isStuck;
+
+    public bool IsStuck => isStuck;
+
     // ---------------------------------------------------------------------
     // Lights bridge
     // ---------------------------------------------------------------------
@@ -161,6 +180,7 @@ public class CarController : MonoBehaviour
             return isOverturned && isMovingSlowly;
         }
     }
+    
 
     public float ForwardSpeed => rb != null ? Vector3.Dot(rb.linearVelocity, transform.forward) : 0f;
 
@@ -489,31 +509,172 @@ public class CarController : MonoBehaviour
 
     private void HandleVehicleRecovery()
     {
-        if (!enableRecovery || Keyboard.current == null)
-        {
+        if (!enableRecovery || rb == null || Keyboard.current == null)
             return;
-        }
-            
-        if (!Keyboard.current.rKey.wasPressedThisFrame)
+
+        UpdateStuckDetection();
+
+        float uprightAmount = Vector3.Dot(transform.up, Vector3.up);
+
+        bool isOverturned = uprightAmount < upsideDownThreshold;
+
+        bool isMovingSlowly = rb.linearVelocity.magnitude <= maxResetSpeed;
+
+        // Обычный recovery перевёрнутой машины.
+        if (Keyboard.current.rKey.wasPressedThisFrame)
         {
-            return;
+            if (isOverturned && isMovingSlowly)
+            {
+                RecoverVehicle();
+
+                recoveryHoldTimer = 0f;
+                ResetStuckDetection();
+
+                return;
+            }
         }
 
-        if (CanRecover)
+        // Телепорт разрешён ТОЛЬКО если машина
+        // до этого реально была признана застрявшей.
+        if (isStuck && Keyboard.current.rKey.isPressed)
         {
-            RecoverVehicle();
+            recoveryHoldTimer += Time.deltaTime;
+
+            if (recoveryHoldTimer >= stuckRecoveryHoldTime)
+            {
+                RecoverToClosestPoint();
+
+                recoveryHoldTimer = 0f;
+                ResetStuckDetection();
+            }
+        }
+        else
+        {
+            recoveryHoldTimer = 0f;
         }
     }
 
     private void RecoverVehicle()
     {
+        Vector3 targetPosition = rb.position + Vector3.up * resetHeight;
+
+        Vector3 currentEuler = rb.rotation.eulerAngles;
+
+        Quaternion targetRotation = Quaternion.Euler(0f, currentEuler.y, 0f);
+
+        TeleportVehicle( targetPosition, targetRotation);
+    }
+    
+    private void RecoverToClosestPoint()
+    {
+        if (recoveryPoints == null || recoveryPoints.Length == 0)
+        {
+            return;
+        }
+
+        Transform closestPoint = null;
+        float closestDistance = float.MaxValue;
+
+        foreach (Transform point in recoveryPoints)
+        {
+            if (point == null)
+                continue;
+
+            float distance = Vector3.SqrMagnitude(rb.position - point.position);
+
+            if (distance < closestDistance)
+            {
+                closestDistance = distance;
+                closestPoint = point;
+            }
+        }
+
+        if (closestPoint == null)
+            return;
+
+        TeleportVehicle(closestPoint.position, closestPoint.rotation);
+    }
+
+    private void TeleportVehicle(Vector3 targetPosition, Quaternion targetRotation)
+    {
         rb.linearVelocity = Vector3.zero;
         rb.angularVelocity = Vector3.zero;
 
-        Vector3 currentEuler = transform.eulerAngles;
+        rb.position = targetPosition;
+        rb.rotation = targetRotation;
 
-        transform.position += Vector3.up * resetHeight;
+        Physics.SyncTransforms();
+    }
 
-        transform.rotation = Quaternion.Euler(0f, currentEuler.y, 0f);
+    private void UpdateStuckDetection()
+    {
+        if (rb == null || Keyboard.current == null)
+            return;
+
+        float speed = rb.linearVelocity.magnitude;
+
+        bool tryingToMove = Keyboard.current.wKey.isPressed || Keyboard.current.sKey.isPressed;
+
+        // Если машина уже признана застрявшей,
+        // оставляем это состояние до тех пор,
+        // пока она реально не начнёт двигаться.
+        if (isStuck)
+        {
+            if (speed > stuckReleaseSpeed)
+            {
+                ResetStuckDetection();
+            }
+
+            return;
+        }
+
+        // Игрок не пытается ехать — это просто стоящая машина.
+        if (!tryingToMove)
+        {
+            ResetStuckDetection();
+            return;
+        }
+
+        // Машина нормально движется.
+        if (speed > stuckSpeedThreshold)
+        {
+            ResetStuckDetection();
+            return;
+        }
+
+        // Начало проверки.
+        if (stuckTimer <= 0f)
+        {
+            stuckStartPosition = rb.position;
+        }
+
+        stuckTimer += Time.deltaTime;
+
+        if (stuckTimer >= stuckDetectionTime)
+        {
+            float travelledDistance = Vector3.Distance(stuckStartPosition, rb.position);
+
+            if (travelledDistance <= stuckMaxTravelDistance)
+            {
+                isStuck = true;
+            }
+            else
+            {
+                // Машина всё-таки двигается.
+                stuckTimer = 0f;
+                stuckStartPosition = rb.position;
+            }
+        }
+    }
+
+    private void ResetStuckDetection()
+    {
+        stuckTimer = 0f;
+        isStuck = false;
+
+        if (rb != null)
+        {
+            stuckStartPosition = rb.position;
+        }
     }
 }

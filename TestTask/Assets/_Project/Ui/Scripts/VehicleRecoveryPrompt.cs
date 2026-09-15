@@ -1,19 +1,39 @@
 using UnityEngine;
+using TMPro;
 
 public class VehicleRecoveryPrompt : MonoBehaviour
 {
     [SerializeField] private CarController carController;
     [SerializeField] private GameObject recoveryPrompt;
+    [SerializeField] private TMP_Text recoveryPromptText;
 
     private void Update()
     {
-        if (carController == null || recoveryPrompt == null)
+        if (carController == null || recoveryPrompt == null || recoveryPromptText == null)
+        {
             return;
+        }
 
-        bool shouldShow =
-            carController.isActiveAndEnabled &&
-            carController.CanRecover;
+        if (!carController.isActiveAndEnabled)
+        {
+            recoveryPrompt.SetActive(false);
+            return;
+        }
 
-        recoveryPrompt.SetActive(shouldShow);
+        if (carController.CanRecover)
+        {
+            recoveryPrompt.SetActive(true);
+            recoveryPromptText.text = "[R] Recover Vehicle";
+            return;
+        }
+
+        if (carController.IsStuck)
+        {
+            recoveryPrompt.SetActive(true);
+            recoveryPromptText.text = "[Hold R] Reset Stuck Vehicle";
+            return;
+        }
+
+        recoveryPrompt.SetActive(false);
     }
 }
