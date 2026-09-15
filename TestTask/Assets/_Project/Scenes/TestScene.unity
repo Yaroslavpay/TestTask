@@ -3207,7 +3207,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::RouteController
   routePoints:
   - {fileID: 1598036777}
-  - {fileID: 2014442013}
   - {fileID: 198253994}
   - {fileID: 1221277733}
 --- !u!1 &747861785
