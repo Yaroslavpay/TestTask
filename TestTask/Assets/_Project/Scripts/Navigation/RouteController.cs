@@ -29,8 +29,27 @@ public class RouteController : MonoBehaviour
     private void Start()
     {
         currentPointIndex = 0;
+        currentPointIndex = 0;
+
+        HideAllRouteMarkers();
+
+        if (routePoints != null && routePoints.Length > 0 && routePoints[0] != null)
+        {
+            routePoints[0].SetActive(true);
+        }
+
         UpdateRoutePoints();
     }
+
+    private void HideAllRouteMarkers()
+    {
+        RoutePoint[] allRoutePoints = FindObjectsByType<RoutePoint>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+
+        foreach (RoutePoint point in allRoutePoints)
+        {
+            point.SetActive(false);
+        }
+    }       
 
     public void ReachPoint(RoutePoint point)
     {
